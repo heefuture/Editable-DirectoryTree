@@ -8,3 +8,78 @@
     align-items: center;
     justify-content: center;
 }
+
+/* .data-input {
+    width: 400px;
+    margin-left: 100px;
+}
+
+
+.container-editable-tree {
+    width: 200px;
+    height: 600px;
+    box-shadow: 2px 8px 30px 0 rgba(115, 119, 139, 0.2);
+}
+
+.ant-tree-list {
+    padding: 16px 0;
+    overflow-x: hidden;
+}
+
+.ant-tree .ant-tree-treenode {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 16px;
+    color: #31415f;
+}
+
+.ant-tree .ant-tree-treenode:hover {
+    background-color: #f5f6fa;
+}
+
+.ant-tree .ant-tree-treenode:hover .tree-leaf .action {
+    margin-right: 0;
+}
+
+.tree-leaf .action {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 36px;
+    line-height: 34px;
+    padding: 0 10px;
+    margin-right: -300px;
+    transition: margin .3s ease-in-out;
+    box-shadow: -2px 0 4px 0 rgba(0, 21, 41, 0.08);
+    background-color: #f7f8fb;
+}
+
+.tree-leaf .action .icon {
+    margin-right: 4px;
+}
+
+.tree-leaf .action .icon:nth-last-child(1) {
+    margin-right: 0;
+}
+
+.ant-tree .ant-tree-treenode-selected {
+    background-color: #f5f6fa;
+}
+
+.ant-tree-indent-unit {
+    width: 8px;
+}
+
+.ant-tree .ant-tree-node-content-wrapper:hover,
+.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+    background: none;
+}
+
+.tree-leaf {
+    width: 136px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+} */

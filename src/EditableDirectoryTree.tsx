@@ -1,14 +1,12 @@
 import React, { useEffect, useState, Key, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Tree, Input } from 'antd'
+import { Tree, Input, Dropdown, Menu} from 'antd'
+import { DownOutlined } from '@ant-design/icons';
 import { TreeProps } from 'antd/lib/tree'
-//import { DataNode } from 'rc-tree/lib/interface'
-import { Dropdown, Menu, Tabs, Switch } from 'antd';
 import { message } from 'antd'
 import shortid from 'shortid';
 
 import 'antd/dist/antd.css';
-import '/src/index.css';
 
 const { DirectoryTree } = Tree;
 
@@ -19,73 +17,6 @@ type NeverPick<T, U> = {
 }
 
 const INPUT_ID = 'inputId'
-
-const ProjectPath = "/data"
-
-const testTreeData = [
-    {
-        key: '0-0',
-        name: 'parent 0',
-        isLeaf: false,
-        path: 'parent 0',
-        isCreate: false,
-        isEdit: false,
-        parentKey: '',
-        children: [
-            {
-                name: 'leaf 0-0',
-                key: '0-0-0',
-                isLeaf: true,
-                path: 'parent 0',
-                isCreate: false,
-                isEdit: false,
-                parentKey: '0-0',
-                children: []
-            },
-            {
-                name: 'leaf 0-1',
-                key: '0-0-1',
-                isLeaf: false,
-                path: 'parent 0',
-                isCreate: false,
-                isEdit: false,
-                parentKey: '0-0',
-                children: [],
-            },
-        ],
-    },
-    {
-        name: 'parent 1',
-        key: '0-1',
-        isLeaf: false,
-        path: 'parent 0',
-        isCreate: false,
-        isEdit: false,
-        parentKey: '',
-        children: [
-            {
-                name: 'leaf 1-0',
-                key: '0-1-0',
-                isLeaf: true,
-                path: 'parent 0',
-                isCreate: false,
-                isEdit: false,
-                parentKey: '0-1',
-                children: []
-            },
-            {
-                name: 'leaf 1-1',
-                key: '0-1-1',
-                isLeaf: true,
-                path: 'parent 0',
-                isCreate: false,
-                isEdit: false,
-                parentKey: '0-1',
-                children: []
-            },
-        ],
-    },
-];
 
 export interface IPathAttr {
     key: string
@@ -107,29 +38,38 @@ interface IEditableTree {
     onEdit?: (value: string, id: Key) => void
     onCreate?: (value: string, parentDir: Key) => void
     onDelete?: (id: Key) => void
-    onSelect?: (selectedKeys:Key[]) => void
+    onSelect?: (selectedKeys:Key[], node:any) => void
 }
 
-// function reatPathTree(path) {
-//     var tree;
-//     return tree;
-// }
 /**
  * 修改tree，action就返回修改后的item， 不修改就不返回
  */
-export const deepTree = (tree = [], action = () => {}) => {
+export const deepTree = (tree = [], action = () => { }) => {
     return tree.map((item) => {
-      const newItem = action({ ...item }) || item;
-      if (newItem.children) {
-        newItem.children = deepTree(newItem.children, action);
-      }
-      return newItem;
+        const newItem = action({ ...item }) || item;
+        if (newItem.children) {
+            newItem.children = deepTree(newItem.children, action);
+        }
+        return newItem;
     });
 };
 
-//注意path改了底层也要更着改？？？？
 
-const EditableTree = ({
+/**
+ * 递归遍历tree，返回符合func过滤的item数组
+ */
+export const deepTreeFilter = (tree = [], func = () => { }) => {
+    let array = tree.filter((item) => func({ ...item }));
+    let childArr = new Array;
+    tree.forEach(function (item) {
+        childArr = [...childArr, ...deepTreeFilter(item.children, func)];
+    });
+
+    return [...array, ...childArr];
+};
+
+//注意path改了底层也要更着改？？？？
+const EditableDirectoryTree = ({
     roots,
     rootPath,
     onEdit,
@@ -141,7 +81,8 @@ const EditableTree = ({
     autoExpandParent = true,
     ...props
 }: IEditableTree & ITreeProps) => {
-    const [showLine, setShowLine] = useState<boolean>(false);
+    const [showLine, setShowLine] = useState<boolean>(true);
+    const [showIcon, setShowIcon] = useState<boolean>(false);
     const [isInputShow, setInputShow] = useState(true);
     const [isUpdated, setUpdated] = useState(false);
     const [rightClickKey, setRightClickKey] = useState();
@@ -171,6 +112,27 @@ const EditableTree = ({
     //     // const treeData = reatPathTree(rootPath)
     //     setTreeData(treeData)
     // }, [treeData])
+
+    useEffect(() => {
+        // const list = JSON.parse(JSON.stringify(rootPath))
+        // const treeData = reatPathTree(rootPath)
+        setSelectKeys(selectedKeys);
+        let newExpandItems = deepTreeFilter(treeData, (item) => {
+            if (!item.isLeaf && selectedKeys.includes(item.key)){
+                return true;
+            }
+            if (item.children) {
+                let selectedchildren = item.children.filter( ({ key }) => selectedKeys.includes(key))
+                if (selectedchildren.length > 0){
+                    return true;
+                }
+            }
+            return false;
+        });
+        let newExpandKeys = newExpandItems.map((item) => { return item.key; });
+        handleExpand([...expandKeys, ...newExpandKeys]);
+
+    }, [selectedKeys])
 
     const inputNode = useCallback(
         (input) => {
@@ -313,22 +275,25 @@ const EditableTree = ({
         onDelete && onDelete(delKey)
     }
 
+    let lastSelectNode = null;
     const handleNodeSelect = (
         selectedKeys: (string | number)[],
-        info?: { nativeEvent: MouseEvent }
+        info?: { nativeEvent: MouseEvent, node:any }
     ) => {
         const inputId: any = (info?.nativeEvent?.target as HTMLInputElement)?.id
         // 防止选中input所在的节点
         if (inputId !== INPUT_ID) {
+            //if (lastSelectNode == 
             setSelectKeys(selectedKeys);
-            onSelect && onSelect(selectedKeys);
+            onSelect && onSelect(selectedKeys, info?.node);
         }
     }
 
-    const handleExpand = (expandedKeys: Key[]) => {
-        setExpandKeys([...new Set(expandedKeys)])
-        setAutoExpand(false)
+    const handleExpand = (expandedKeys: Key[], info?: {expanded: boolean, node: any}) => {
+        setExpandKeys([...new Set(expandedKeys)]);
+        //setAutoExpand(false)
     }
+
 
     const menu = (item) => (
         <Menu
@@ -436,36 +401,24 @@ const EditableTree = ({
                 };
             }),
         ]
-        // const tree = deepTree(roots, (item) => {
-        //     return {
-        //         key: item.key,
-        //         name: item.name,
-        //         title: genItemTitle(item),
-        //     };
-        // });
-        // return tree;
     };
     console.log('render==', treeData);
     console.log('rightClickKey==', rightClickKey);
     return (
-        <div style={{ display: 'flex' }}>
-        {/* <div style={{ display: 'flex', alignItems: 'center' }}>
-          <Input.Search
-            placeholder="input search text"
-            onSearch={onSearch}
-            style={{ width: 180 }}
-          />
-          <Switch
-            checkedChildren="关联右侧"
-            unCheckedChildren="不关联右侧"
-            checked={rightConnect}
-            onChange={setRightConnect}
-          />
-        </div> */}
+        <div style={{ display: 'flex'}}>
+            {/* <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Input.Search
+                    placeholder="input search text"
+                    onSearch={onSearch}
+                    style={{ width: 180 }}
+                />
+            </div> */}
             <DirectoryTree
                 showLine={showLine}
-                style={{ width: 280 }}
+                style={{ width: '100%' }}
                 //draggable
+                switcherIcon={<DownOutlined />}
+                showIcon={showIcon}
                 blockNode
                 defaultExpandAll
                 onRightClick={({ node }) => setRightClickKey(node.key)}
@@ -482,126 +435,4 @@ const EditableTree = ({
     )
 }
 
-//export default EditableTree
-
-const App = () => {
-    const [expandKeys, setExpandKeys] = useState<Key[]>();
-    const [selectKeys, setSelectKeys] = useState<Key[]>();
-    const [activeTabKey, setActiveTabKey] = useState();
-    const [tabItems, seTabItems] = useState([]);
-    // const [dataList, setDataList] = useState([
-    //   {
-    //     id: 1,
-    //     name: 'hhh',
-    //     parentId: 0
-    //   },
-    //   {
-    //     id: 2,
-    //     name: 'zzz',
-    //     parentId: 0
-    //   }
-    // ])
-  
-    const handleEdit = (value: string, id: Key) => {
-    //   const list = dataList.map((item) => ({
-    //     ...item,
-    //     name: id === item.id ? value : item.name
-    //   }))
-    //   setDataList(list)
-    }
-  
-    const handleCreate = (value: string, parentId: Key) => {
-    //   const list = [
-    //     ...dataList,
-    //     {
-    //       id: Math.floor(Math.random() * 6000000) + 1,
-    //       name: value,
-    //       parentId: Number(parentId)
-    //     }
-    //   ]
-    //   setDataList(list)
-    }
-  
-    const handleDelete = (id: Key) => {
-    //   const list = deletedList(id)
-    //   setDataList(list)
-    }
-  
-    const deletedList = (parentId: Key) => {
-    //   const list = JSON.parse(JSON.stringify(dataList))
-    //   const arr = [parentId]
-    //   for (let i = 0; i < list.length; i++) {
-    //     const isLeafOrChild =
-    //       arr.includes(list[i].id) || arr.includes(list[i].parentId)
-  
-    //     if (isLeafOrChild) {
-    //       arr.push(list[i].id)
-    //       list.splice(i, 1)
-    //       i--
-    //     }
-    //   }
-    //  return list
-    }
-    return (
-     <div style={{ display: 'flex' }}>
-      <div className="container-demo">
-        <EditableTree
-          roots={testTreeData}
-          onEdit={(value, id) => {
-            console.log('value, id: ', value, id);
-            value && handleEdit(value, id);
-            value
-              ? message.success(`value:${value}, id:${id}`)
-              : message.warn(`value为空`);
-          }}
-          onCreate={(value, parentId) => {
-            console.log('value,parentId: ', value, parentId);
-            value
-              ? message.success(`value:${value}, parentId:${parentId}`)
-              : message.warn(`value为空`);
-            value && handleCreate(value, parentId);
-          }}
-          onDelete={(id) => {
-            message.success(`成功删除节点${id}`);
-            handleDelete(id)
-          }}
-          expandedKeys={expandKeys}
-          selectedKeys={selectKeys}
-        />
-        </div>
-        <Tabs
-            hideAdd
-            type="editable-card"
-            //onEdit={onEdit}
-            activeKey={activeTabKey}
-            onChange={setActiveTabKey}
-            items={tabItems.map((item) => ({
-                ...item,
-                key:'',
-                label:'',
-              }))
-            }
-        >
-
-        </Tabs>
-        {/* <Input.TextArea
-          rows={27}
-          className="data-input"
-          value={JSON.stringify(testTreeData)}
-          onChange={({ currentTarget }) => {
-            try {
-              //setDataList(JSON.parse(currentTarget.value))
-            } catch (error) {}
-          }}
-        /> */}
-      
-      </div>
-    )
-  }
-  
-createRoot(document.getElementById('container')!).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  )
-  
+export default EditableDirectoryTree
